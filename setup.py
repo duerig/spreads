@@ -100,14 +100,14 @@ setup(
         "autorotate": ["jpegtran-cffi >= 0.4"],
         "gui": ["PySide >= 1.2.1"],
         "hidtrigger": ["hidapi-cffi >= 0.1"],
-        "scantailor": ["psutil == 2.0.0"],
+        "scantailor": ["psutil==2.1.1"],
         "web": [
             "Flask >= 0.10.1",
             "jpegtran-cffi >= 0.4",
             "requests >= 2.2.0",
             "waitress >= 0.8.8",
             "zipstream >= 1.0.2",
-            "tornado == 3.2"
+            "tornado==3.2.1"
         ]
     }
 )
