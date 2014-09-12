@@ -108,7 +108,7 @@ $fa-font-path: "../node_modules/font-awesome/fonts";
   .crop-preview {
     position: absolute;
     background-color: blue;
-    opacity: 0.5;
+    opacity: 0.2;
   }
 
   img.odd, img.even {
@@ -322,11 +322,39 @@ li.page-preview {
       justify-content: center;
     }
     img {
-      // Only works for Firefox 26+
-      image-orientation: from-image;
       max-width: calc(100% - 160px);
       max-height: 100%;
     }
+  }
+
+  div.imageRight, div.imageLeft {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    width: 600px;
+    transform: translate(0, 25%);
+    -webkit-transform: translate(0, 25%);
+    -moz-transform: translate(0, 25%);
+  }
+
+  div.imageRight img {
+    transform: rotate(-90deg);
+    -webkit-transform: rotate(-90deg);
+    -moz-transform: rotate(-90deg);
+  }
+
+  div.imageLeft img {
+    transform: rotate(90deg);
+    -webkit-transform: rotate(90deg);
+    -moz-transform: rotate(90deg);
+  }
+
+  .page-form {
+    background-color: #fff;
+    padding: 20px;
+    margin: 20px;
   }
 
   .activity {

@@ -41,9 +41,15 @@
       return { displayToolbar: util.isTouchDevice() };
     },
 
-    toggleToolbar: function() {
+    showToolbar: function() {
       if (!util.isTouchDevice()) {
-        this.setState({displayToolbar: !this.state.displayToolbar});
+        this.setState({displayToolbar: true });
+      }
+    },
+
+    hideToolbar: function() {
+      if (!util.isTouchDevice()) {
+	this.setState({ displayToolbar: false });
       }
     },
 
@@ -60,7 +66,7 @@
                                      this.props.imageType, true);
       return (
         <li className={liClasses} title="Open full resolution image in lightbox"
-            onMouseEnter={this.toggleToolbar} onMouseLeave={this.toggleToolbar}>
+            onMouseEnter={this.showToolbar} onMouseLeave={this.hideToolbar}>
           <F.Row>
             <F.Column>
               <a onClick={this.props.selectCallback}
@@ -106,6 +112,7 @@
         lightboxImage: undefined,
         lightboxNext: undefined,
         lightboxPrevious: undefined,
+	lightboxPage: undefined,
         imageType: 'raw',
         selectedPages: []
       };
@@ -119,6 +126,23 @@
      * @param {string} [img] - URL for image to be displayed in lightbox
      */
     toggleLightbox: function(workflow, page) {
+      var changed = undefined;
+      if (this.state.lightboxPage)
+      {
+	var hints = this.state.lightboxPage.postprocessing_hints;
+	var section = this.state.lightboxSection;
+	if (section !== '' && hints && section !== hints.section)
+	{
+	  hints.section = section;
+	  changed = this.state.lightboxPage;
+	}
+	var color = this.state.lightboxColor;
+	if (color !== '' && color !== hints.color)
+	{
+	  hints.color = color;
+	  changed = this.state.lightboxPage;
+	}
+      }
       var image, next, previous;
       if (page) {
         var allPages = workflow.get('pages'),
@@ -128,11 +152,30 @@
         next = (pageIdx != (allPages.length-1)) && allPages[pageIdx+1];
         previous = (pageIdx != 0) && allPages[pageIdx-1];
       }
+      var getKeyIfAvailable = function (key, defaultValue) {
+	var result = defaultValue;
+	if (page && page.postprocessing_hints[key])
+	{
+	  result = page.postprocessing_hints[key];
+	}
+	else if (previous && previous.postprocessing_hints[key])
+	{
+	  result = previous.postprocessing_hints[key];
+	}
+	return result;
+      }.bind(this);
       this.setState({
         lightboxImage: image,
         lightboxNext: next,
-        lightboxPrevious: previous
+        lightboxPrevious: previous,
+	lightboxPage: page,
+	lightboxSection: getKeyIfAvailable('section', ''),
+	lightboxColor: getKeyIfAvailable('color', '')
       });
+      if (changed)
+      {
+	this.props.workflow.updatePage(changed);
+      }
     },
     /**
      * Change page of page thumbnail display.
@@ -277,13 +320,21 @@
         </main>
       );
     },
+
     renderLayer: function() {
+      console.log(this.state.lightboxNext, this.state.lightboxPrevious);
+      var rotateClass = 'imageLeft';
+      if (this.state.lightboxPage && this.state.lightboxPage.is_odd
+	  && this.props.workflow.get('config').device.upside_down)
+      {
+	rotateClass = 'imageRight';
+      }
       if (this.state.lightboxImage) {
         var handleNext;
         if (this.state.lightboxNext) {
           handleNext = function(e) {
             e.stopPropagation();
-              this.toggleLightbox(this.props.workflow, this.state.lightboxNext);
+            this.toggleLightbox(this.props.workflow, this.state.lightboxNext);
           }.bind(this);
         }
         var handlePrevious;
@@ -294,12 +345,54 @@
           }.bind(this);
         }
 
+	var handleZoom = function (e) {
+	  e.stopPropagation();
+	  window.open(this.state.lightboxImage);
+	  this.toggleLightbox(null, null);
+	}.bind(this);
+
+	var handleDone = function (e) {
+	  e.stopPropagation();
+	  this.toggleLightbox(null, null);
+	}.bind(this);
+
+	var handleChangeColor = function (e) {
+	  this.setState({ lightboxColor: e.target.value });
+	}.bind(this);
+
+	var handleChangeSection = function (e) {
+	  this.setState({ lightboxSection: e.target.value });
+	}.bind(this);
+
         return (
           <Overlay>
-            <Lightbox
-              onClose={_.partial(this.toggleLightbox, null, null)}
-              src={this.state.lightboxImage}
-              handleNext={handleNext} handlePrevious={handlePrevious}/>
+	    <div className={rotateClass}>
+	      <a onClick={handleZoom}>
+	        <img src={this.state.lightboxImage} />
+	      </a>
+	    </div>
+	    <div className="page-form">
+	        <fieldset>
+	          <legend>Page Metadata</legend>
+	          <label>Section
+	            <input id="section" type="text" value={this.state.lightboxSection} onChange={handleChangeSection}/>
+	          </label>
+	        </fieldset>
+	        <fieldset>
+	          <legend>Postprocessing Hints</legend>
+	          <label>Color Range
+	            <select id="color" value={this.state.lightboxColor} onChange={handleChangeColor}>
+	              <option value=""></option>
+	              <option value="binary">Binary</option>
+	              <option value="grayscale">Grayscale</option>
+	              <option value="color">Full Color</option>
+	            </select>
+	          </label>
+	        </fieldset>
+	        {handlePrevious && <button onClick={handlePrevious}>Previous</button>}
+	        <button onClick={handleDone}>Done</button>
+	        {handleNext && <button onClick={handleNext}>Next</button>}
+	    </div>
           </Overlay>);
       }
     }

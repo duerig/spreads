@@ -119,10 +119,11 @@ class ValidationError(ValueError):
 
 class Page(object):
     __slots__ = ["sequence_num", "capture_num", "raw_image", "page_label",
-                 "processed_images"]
+                 "processed_images", "is_odd", "postprocessing_hints"]
 
     def __init__(self, raw_image, sequence_num=None, capture_num=None,
-                 page_label=None, processed_images=None):
+                 page_label=None, processed_images=None,
+                 postprocessing_hints=None):
 
         #: The path to the raw image
         self.raw_image = raw_image
@@ -161,6 +162,16 @@ class Page(object):
         else:
             self.page_label = unicode(self.sequence_num)
 
+        #: Is this an odd page or an even page, i.e. does the page lay
+        #  on the right side of the book (odd) or left side (even)
+        self.is_odd = True
+        if self.sequence_num % 2 == 0:
+            self.is_odd = False
+
+        #: Key/value strings to be used by postprocessing software to
+        #  automatically convert this page to its final form.
+        self.postprocessing_hints = postprocessing_hints or {}
+
     def get_latest_processed(self, image_only=True):
         img_exts = ('.jpg', '.jpeg', '.png', '.tif', '.tiff')
         paths = self.processed_images.values()
@@ -179,6 +190,8 @@ class Page(object):
             'page_label': self.page_label,
             'raw_image': self.raw_image,
             'processed_images': self.processed_images,
+            'is_odd': self.is_odd,
+            'postprocessing_hints': self.postprocessing_hints
         }
 
 
@@ -592,11 +605,15 @@ class Workflow(object):
             processed_images = {}
             for plugname, fpath in dikt['processed_images'].iteritems():
                 processed_images[plugname] = self.path/fpath
+            hints = None
+            if 'postprocessing_hints' in dikt:
+                hints = dikt['postprocessing_hints']
             return Page(raw_image=raw_image,
                         capture_num=dikt['capture_num'],
                         processed_images=processed_images,
                         page_label=dikt['page_label'],
-                        sequence_num=dikt['sequence_num'])
+                        sequence_num=dikt['sequence_num'],
+                        postprocessing_hints=hints)
         fpath = self.path / 'pagemeta.json'
         if not fpath.exists():
             return []

@@ -129,6 +129,22 @@
         .done(options.onSuccess || util.noop);
     },
 
+    updatePage: function(page) {
+      var that = this;
+      jQuery.ajax({
+	type: 'POST',
+	contentType: 'application/json',
+	processData: false,
+	url: '/api/workflow/' + this.id + '/page/' + page.capture_num,
+	data: JSON.stringify(page)
+      }).fail(function (xhr) {
+	console.log('Failed updatePage: ', xhr);
+      }).done(function() {
+	that.trigger('change');
+	that.trigger('change:pages');
+      });
+    },
+
     deletePages: function(options) {
       var options = options || {};
       if (_.isEmpty(options.pages)) return;

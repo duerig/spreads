@@ -417,11 +417,26 @@ def find_page(workflow, number):
     return page
 
 
-@app.route('/api/workflow/<workflow:workflow>/page/<int:number>')
+@app.route('/api/workflow/<workflow:workflow>/page/<int:number>',
+           methods=['GET'])
 def get_single_page(workflow, number):
     page = find_page(workflow, number)
     return jsonify(dict(page=page))
 
+@app.route('/api/workflow/<workflow:workflow>/page/<int:number>',
+           methods=['POST'])
+def update_single_page(workflow, number):
+    page = find_page(workflow, number)
+    newInfo = json.loads(request.data)
+    if 'postprocessing_hints' in newInfo:
+        if 'color' in newInfo['postprocessing_hints']:
+            page.postprocessing_hints['color'] = newInfo['postprocessing_hints']['color']
+        if 'section' in newInfo['postprocessing_hints']:
+            page.postprocessing_hints['section'] = newInfo['postprocessing_hints']['section']
+            # Update ToC based on the section
+            pass
+    workflow._save_pages();
+    return 'OK'
 
 @app.route('/api/workflow/<workflow:workflow>/page')
 def get_all_pages(workflow):
