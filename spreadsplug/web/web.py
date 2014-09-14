@@ -423,18 +423,13 @@ def get_single_page(workflow, number):
     page = find_page(workflow, number)
     return jsonify(dict(page=page))
 
-@app.route('/api/workflow/<workflow:workflow>/page/<int:number>',
-           methods=['POST'])
-def update_single_page(workflow, number):
+@app.route('/api/workflow/<workflow:workflow>/page/<int:number>/post',
+           methods=['PUT'])
+def set_page_post_properties(workflow, number):
     page = find_page(workflow, number)
-    newInfo = json.loads(request.data)
-    if 'postprocessing_hints' in newInfo:
-        if 'color' in newInfo['postprocessing_hints']:
-            page.postprocessing_hints['color'] = newInfo['postprocessing_hints']['color']
-        if 'section' in newInfo['postprocessing_hints']:
-            page.postprocessing_hints['section'] = newInfo['postprocessing_hints']['section']
-            # Update ToC based on the section
-            pass
+    new_post = json.loads(request.data)
+    for key, value in new_post.iteritems():
+        page.postprocessing_hints[key] = value
     workflow._save_pages();
     return 'OK'
 

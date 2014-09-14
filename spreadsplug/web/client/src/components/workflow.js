@@ -25,8 +25,8 @@
       _ = require('underscore'),
       ModelMixin = require('../../vendor/backbonemixin.js'),
       F = require('./foundation.js'),
-      Lightbox = require('./overlays.js').LightBox,
       Overlay = require('./overlays.js').Overlay,
+      PageDisplay = require('./PageDisplay.js').PageDisplay,
       LayeredComponentMixin = require('./overlays.js').LayeredComponentMixin,
       util = require('../util.js');
 
@@ -109,10 +109,7 @@
         /** Number of thumbnails to display */
         thumbCount: 24,
         /** Image to display in a lightobx overlay */
-        lightboxImage: undefined,
-        lightboxNext: undefined,
-        lightboxPrevious: undefined,
-	lightboxPage: undefined,
+	lightboxSeqNum: undefined,
         imageType: 'raw',
         selectedPages: []
       };
@@ -125,57 +122,8 @@
      *
      * @param {string} [img] - URL for image to be displayed in lightbox
      */
-    toggleLightbox: function(workflow, page) {
-      var changed = undefined;
-      if (this.state.lightboxPage)
-      {
-	var hints = this.state.lightboxPage.postprocessing_hints;
-	var section = this.state.lightboxSection;
-	if (section !== '' && hints && section !== hints.section)
-	{
-	  hints.section = section;
-	  changed = this.state.lightboxPage;
-	}
-	var color = this.state.lightboxColor;
-	if (color !== '' && color !== hints.color)
-	{
-	  hints.color = color;
-	  changed = this.state.lightboxPage;
-	}
-      }
-      var image, next, previous;
-      if (page) {
-        var allPages = workflow.get('pages'),
-            pageIdx = allPages.indexOf(page);
-        image = util.getPageUrl(this.props.workflow, page.capture_num,
-                                this.state.imageType, false);
-        next = (pageIdx != (allPages.length-1)) && allPages[pageIdx+1];
-        previous = (pageIdx != 0) && allPages[pageIdx-1];
-      }
-      var getKeyIfAvailable = function (key, defaultValue) {
-	var result = defaultValue;
-	if (page && page.postprocessing_hints[key])
-	{
-	  result = page.postprocessing_hints[key];
-	}
-	else if (previous && previous.postprocessing_hints[key])
-	{
-	  result = previous.postprocessing_hints[key];
-	}
-	return result;
-      }.bind(this);
-      this.setState({
-        lightboxImage: image,
-        lightboxNext: next,
-        lightboxPrevious: previous,
-	lightboxPage: page,
-	lightboxSection: getKeyIfAvailable('section', ''),
-	lightboxColor: getKeyIfAvailable('color', '')
-      });
-      if (changed)
-      {
-	this.props.workflow.updatePage(changed);
-      }
+    setLightbox: function(sequenceNumber) {
+      this.setState({ lightboxSeqNum: sequenceNumber });
     },
     /**
      * Change page of page thumbnail display.
@@ -288,7 +236,7 @@
                         <PagePreview page={page} workflow={workflow} key={page.capture_num} imageType={this.state.imageType}
                                     selected={_.contains(this.state.selectedPages, page)}
                                     selectCallback={_.partial(this.togglePageSelect, page)}
-                                    lightboxCallback={_.partial(this.toggleLightbox, workflow, page)} />
+                                    lightboxCallback={_.partial(this.setLightbox, page.sequence_num)} />
                       );
                     }.bind(this))}
                 </ul>
@@ -322,78 +270,20 @@
     },
 
     renderLayer: function() {
-      console.log(this.state.lightboxNext, this.state.lightboxPrevious);
-      var rotateClass = 'imageLeft';
-      if (this.state.lightboxPage && this.state.lightboxPage.is_odd
-	  && this.props.workflow.get('config').device.upside_down)
+      if (this.state.lightboxSeqNum === undefined)
       {
-	rotateClass = 'imageRight';
+	return null;
       }
-      if (this.state.lightboxImage) {
-        var handleNext;
-        if (this.state.lightboxNext) {
-          handleNext = function(e) {
-            e.stopPropagation();
-            this.toggleLightbox(this.props.workflow, this.state.lightboxNext);
-          }.bind(this);
-        }
-        var handlePrevious;
-        if (this.state.lightboxPrevious) {
-          handlePrevious = function(e) {
-            e.stopPropagation();
-            this.toggleLightbox(this.props.workflow, this.state.lightboxPrevious);
-          }.bind(this);
-        }
-
-	var handleZoom = function (e) {
-	  e.stopPropagation();
-	  window.open(this.state.lightboxImage);
-	  this.toggleLightbox(null, null);
-	}.bind(this);
-
-	var handleDone = function (e) {
-	  e.stopPropagation();
-	  this.toggleLightbox(null, null);
-	}.bind(this);
-
-	var handleChangeColor = function (e) {
-	  this.setState({ lightboxColor: e.target.value });
-	}.bind(this);
-
-	var handleChangeSection = function (e) {
-	  this.setState({ lightboxSection: e.target.value });
-	}.bind(this);
-
-        return (
-          <Overlay>
-	    <div className={rotateClass}>
-	      <a onClick={handleZoom}>
-	        <img src={this.state.lightboxImage} />
-	      </a>
-	    </div>
-	    <div className="page-form">
-	        <fieldset>
-	          <legend>Page Metadata</legend>
-	          <label>Section
-	            <input id="section" type="text" value={this.state.lightboxSection} onChange={handleChangeSection}/>
-	          </label>
-	        </fieldset>
-	        <fieldset>
-	          <legend>Postprocessing Hints</legend>
-	          <label>Color Range
-	            <select id="color" value={this.state.lightboxColor} onChange={handleChangeColor}>
-	              <option value=""></option>
-	              <option value="binary">Binary</option>
-	              <option value="grayscale">Grayscale</option>
-	              <option value="color">Full Color</option>
-	            </select>
-	          </label>
-	        </fieldset>
-	        {handlePrevious && <button onClick={handlePrevious}>Previous</button>}
-	        <button onClick={handleDone}>Done</button>
-	        {handleNext && <button onClick={handleNext}>Next</button>}
-	    </div>
-          </Overlay>);
+      else
+      {
+	return (
+	    <Overlay color="#eee">
+	      <PageDisplay onChange={this.setLightbox}
+                           pageNum={this.state.lightboxSeqNum}
+	                   workflow={this.props.workflow}
+	                   imageType={this.state.imageType} />
+	    </Overlay>
+	);
       }
     }
   });

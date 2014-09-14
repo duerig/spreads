@@ -129,20 +129,17 @@
         .done(options.onSuccess || util.noop);
     },
 
-    updatePage: function(page) {
+    setPagePostProperties: function(pageNum, changed, options) {
       var that = this;
       jQuery.ajax({
-	type: 'POST',
+	type: 'PUT',
 	contentType: 'application/json',
 	processData: false,
-	url: '/api/workflow/' + this.id + '/page/' + page.capture_num,
-	data: JSON.stringify(page)
+	url: '/api/workflow/' + this.id + '/page/' + pageNum + '/post',
+	data: JSON.stringify(changed)
       }).fail(function (xhr) {
-	console.log('Failed updatePage: ', xhr);
-      }).done(function() {
-	that.trigger('change');
-	that.trigger('change:pages');
-      });
+	if (options.onError) options.onError(xhr.responseJSON);
+      }).done(options.onSuccess || util.noop);
     },
 
     deletePages: function(options) {
